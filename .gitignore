@@ -1,0 +1,13 @@
+.svn
+.tmp
+.*.swp
+.*.swo
+.idea
+.project
+.download
+.DS_Store
+bin
+output
+testdatatmp
+scripts/*.csv
+/docs/build

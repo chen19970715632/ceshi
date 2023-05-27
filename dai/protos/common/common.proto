@@ -1,0 +1,188 @@
+syntax = "proto3";
+
+package common;
+option go_package = "github.com/PaddlePaddle/PaddleDTX/dai/protos/common";
+
+// Algorithm is a list of algorithms offered
+enum Algorithm {
+    LINEAR_REGRESSION_VL = 0;      // vertical linear regression
+    LOGIC_REGRESSION_VL = 1;       // vertical logistic regression
+    DNN_PADDLEFL_VL     = 2;       // vertical dnn based
+}
+
+// TaskType defines types of task
+enum TaskType {
+    LEARN = 0;          // type of learning  
+    PREDICT = 1;        // type of prediction 
+}
+
+// RegMode regulation mode for training
+enum RegMode {
+    Reg_None = 0;               // non-reg
+    Reg_Lasso = 1;              // L1-reg
+    Reg_Ridge =2;               // L2-reg
+}
+
+// TrainParams lists all the parameters for training
+message TrainParams {
+    string label = 1;
+    string labelName = 2;        // for LogReg
+    RegMode regMode = 3;
+    double regParam = 4;
+    double alpha = 5;
+    double amplitude = 6;
+    int64 accuracy = 7;
+    bool isTagPart = 8;
+    string idName = 9;            // for vertical learning PSI
+    int64 batchSize = 10;         // for train loop
+}
+
+// TrainModels is final result of distributed training
+message TrainModels {
+    map<string,double> thetas = 1;
+    map<string,double> xbars = 2;
+    map<string,double> sigmas = 3;
+    string label = 4;
+    bool isTagPart = 5;
+    string idName = 6; // for vertical learning PSI
+    string path = 7; // Encrypted model of PaddleFL
+}
+
+// TaskParams lists all the parameters in a task
+message TaskParams {
+    Algorithm algo = 1;
+    TaskType taskType = 2;
+    TrainParams trainParams = 3;
+    string modelTaskID = 4;
+    TrainModels modelParams = 5;
+    EvaluationParams evalParams = 6;
+    LiveEvaluationParams livalParams = 7;
+}
+
+// EvaluationParams lists all the parameters for model evaluation
+message EvaluationParams {
+	bool enable                 = 1; // enables model evaluation
+	EvaluationRule evalRule     = 2; // evaluation rule
+	RandomSplit randomSplit     = 3; // only makes sense when evalRule is `ErRandomSplit`
+	CrossVal cv                 = 4; // only makes sense when evalRule is `ErCrossVal`
+}
+
+// LiveEvaluationParams lists all the parameters for live model evaluation
+message LiveEvaluationParams {
+	bool enable                 = 1; // enables live model evaluation
+	RandomSplit randomSplit     = 2; 
+}
+
+// EvaluationRule defines the ways of evaluation
+enum EvaluationRule {
+    // to divide the dataset randomly by percentage, 
+    // which represents the subset as validation set, and the rest is training set.
+	ErRandomSplit           = 0; 
+    // Cross Validation
+	ErCrossVal              = 1;
+    // Leave One Out and is suitable for small datasets
+	ErLOO                   = 2;
+}
+
+// RandomSplit defines the way to divide the dataset randomly by percentage
+message RandomSplit {
+	int32 percentLO =1; //percentage to leave out as validation set
+}
+
+// CrossVal lists all parameters required in Cross Validation
+message CrossVal {
+	int32 folds 		= 1; // number of folds, 5 or 10 supported, default 10
+	bool shuffle 		= 2; // whether to randomly disorder the samples before dividion, default false
+	bool repeated   	= 3; // whether to repeat CV, reserved field, not implemented yet
+	int32 repeatTimes 	= 4; // number of repetitions, reserved field, not implemented yet
+}
+
+// EvaluationMetricScores defines model evaluation results, covering all supported metrics
+message EvaluationMetricScores {
+    oneof payload {
+        BinaryClassCaseMetricScores binaryClassCaseMetricScores = 1;
+        RegressionCaseMetricScores RegressionCaseMetricScores = 2;
+    }
+}
+
+// CaseType defines the types of problems
+enum CaseType {
+    Regression              = 0; //regression
+    BinaryClass             = 1; //binary classfication
+}
+
+// BinaryClassCaseMetricScores contains the metric scores of binary classfication
+message BinaryClassCaseMetricScores {
+    CaseType caseType                              = 1;
+    double avgAccuracy                             = 2; // average of accuracy
+	double avgPrecision                            = 3; // average of precision
+	double avgRecall                               = 4; // average of recall
+	double avgF1Score                              = 5; // average of F1Score
+	double avgAUC                                  = 6; // average of AUC
+
+    message Point {
+        // A point on roc is represented by [3]float64, [FPR, TPR, threshold]([x,y,threshold])
+        repeated double p = 1; 
+    } 
+    message MetricsPerFold {
+        double accuracy     = 1;
+        double precision    = 2;
+        double recall       = 3;
+        double F1Score      = 4;
+        double AUC          = 5;
+        repeated Point ROC  = 6;
+    }
+    map<int32, MetricsPerFold> metricsPerFold   = 7;
+}
+
+// RegressionCaseMetricScores contains the metric scores of regression
+message RegressionCaseMetricScores {
+    CaseType caseType           = 1;
+    map<int32, double> RMSEs    = 2; // scores of RMSE (Root Mean Squard Error) over all split folds
+    double meanRMSE             = 3; // Mean of RMSEs
+    double stdDevRMSE           = 4; // Standard Deviation of RMSEs 
+}
+
+// TrainTaskResult defines final result of training 
+message TrainTaskResult {
+    message FileRow {
+        repeated string row = 1;
+    }    
+    string taskID = 1; 
+    bool success = 2; // successful or not 
+    bytes model = 3 ; // training outcomes
+    string errMsg = 4; // reason of failure
+    EvaluationMetricScores evalMetricScores = 6; // evaluation results
+    // trainSet is training set after Sample Alignment, and will be used in evaluation, 
+    // and it will be deleted from TrainTaskResult after evaluation
+    repeated FileRow trainSet = 5;
+}
+
+// PredictTaskResult defines final result of prediction
+message PredictTaskResult {
+    string taskID = 1;
+    bool success = 2; // successful or not
+    bytes outcomes = 3; // prediction outcomes
+    string errMsg = 4; // reason of failure
+}
+
+// StartTaskRequest is message sent to a cluster member to start a training task or predicting task.
+message StartTaskRequest {
+    string taskID = 2;
+    bytes file = 3;
+    repeated string hosts = 4;
+    TaskParams params = 5;
+    PaddleFLParams paddleFLParams = 6;
+}
+
+// PaddleFLParams defines node's role and mpc network using paddlefl.
+message PaddleFLParams {
+    int32 role = 1;
+    repeated string nodes = 2;
+}
+
+// StopTaskRequest is message sent to a cluster member to stop a training task or predicting task.
+message StopTaskRequest {
+    string taskID = 2;
+    TaskParams params = 4; 
+}

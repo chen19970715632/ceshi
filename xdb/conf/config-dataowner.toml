@@ -1,0 +1,101 @@
+# the type of the running node, can be set with 'dataOwner' or 'storage'.
+type = "dataOwner"
+
+#########################################################################
+#
+#  [dataOwner] defines features of a dataOwner node.
+#
+#########################################################################
+[dataOwner]
+# Define a name of the node, for readability
+name = "node1"
+
+# The Address this server will listen on
+listenAddress = ":8121"
+
+# The private key of the node.
+# Different key express different identity.
+# Only need to choose one from 'privateKey' and 'keyPath', and if both exist, 'keyPath' takes precedence over 'privateKey'
+# privateKey = "5572e2fa0c259fe798e5580884359a4a6ac938cfff62d027b90f2bac3eceef79"
+keyPath = "./keys"
+
+publicAddress = "10.144.94.17:8121"
+
+# Whether to allow cross-domain requests, the default is false, use with caution in the production environment.
+allowCros = false
+
+[dataOwner.slicer]
+    type = "simpleSlicer"
+    [dataOwner.slicer.simpleSlicer]
+        blockSize = 4194304
+        queueSize = 4
+
+[dataOwner.encryptor]
+    type = "softEncryptor"
+    [dataOwner.encryptor.softEncryptor]
+        password = "abcdefg"
+
+# The generator of the challenge requests, to check if the file exists on the storage node.
+[dataOwner.challenger]
+    # Generator's type, can be 'pairing' or 'merkle'.
+    type = "pairing"
+
+    # Proof of data Possession based on Bilinear Pairing.
+    [dataOwner.challenger.pairing]
+        # Max file slices number when generating pairing based challenge
+        maxIndexNum = 5
+        sk = "Fudm9gDXNlEdCkieMid1WHIHd9K/M/CctBPlF/4y+AU="
+        pk = "B60Vdoq4SVUpVRZf1FM7ImRXo/22q0ZjYMHlaB4HgUXMSsu+2iCrNkk3gROXOUDvB8zWMcBGCnBCAnb6N9WOaBPbKkYWnp/iodp0+GFWvW1DCnAYNV2+vdaFkHaezsqeDqRDsdqV2uG47PTE2xdkljSblWNgKhsHYp7LgCcbBWiMO3TcrzUdq+ETxfIu1Bi7AzSHHAj8oc7toGT0anrO9LPSDcde8rCdsptX5CLH7WvRF0AXrqhX4Mr7i+547qI3"
+        # Random Number used by pdb.
+        randu = "NA1xy6JCWWc8IB4x1CM4DCoxKTqEele6zqD8kCfuj5s="
+        randv = "TV0J8YFWEsybwFdwm3DJvUHXx88YXkzK97Zpvj/tyGc="
+
+    # Proof of data Possession based on Merkle Tree.
+    [dataOwner.challenger.merkle]
+        leveldbRoot = "/home/data/challenger"
+        shrinkSize = 500
+        segmentSize = 5
+
+# Blockchain used by the dataOwner node.
+[dataOwner.blockchain]
+    # blockchain type, 'xchain' or 'fabric'
+    type = "xchain"
+
+    # The configuration of how to invoke contracts using xchain. It is necessary when type is 'xchain'.
+    [dataOwner.blockchain.xchain]
+        mnemonic = "臂 袁 饿 莫 新 棉 骗 矩 巨 愿 稍 造"
+        contractName = "dstorage1"
+        contractAccount = "XC7142093261616521@dstorage"
+        chainAddress = "106.12.139.7:15022"
+        chainName = "dstorage"
+
+    # The configuration of how to invoke contracts using fabric. It is necessary when type is 'fabric'.
+    [dataOwner.blockchain.fabric]
+        configFile = "./conf/fabric/config.yaml"
+        channelId = "mychannel"
+        chaincode = "mycc"
+        userName = "Admin"
+        orgName = "org1"
+
+# The copier makes backups of files, currently only supports 'random-copier'.
+[dataOwner.copier]
+    type = "random-copier"
+
+# The monitor will query new tasks in blockchain regularly, and trigger the task handler's operations
+[dataOwner.monitor]
+    # Whether to monitor the challenge answer of the storage node.
+    challengingSwitch = "on"
+
+    # Whether to monitor the file migration.
+    filemaintainerSwitch = "on"
+    # unit: hour
+    filemigrateInterval = 6
+
+#########################################################################
+#
+#   [log] sets the log related options
+#
+#########################################################################
+[log]
+level = "debug"
+path = "./logs"

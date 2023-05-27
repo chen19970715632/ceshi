@@ -1,0 +1,41 @@
+version: '3'
+
+services:
+  xchain1.node.com:
+    image: registry.baidubce.com/paddledtx/xchain:v3.9
+    container_name: xchain1.node.com
+    ports:
+        - 37201:37101
+        - 8908:8084
+    volumes:
+        - ./user:/home/work/xchain/user
+        - ./xchain1/conf:/home/work/xchain/conf
+        - ./xchain1/data/keys:/home/work/xchain/data/keys
+        - ./xchain1/data/config:/home/work/xchain/data/config
+    networks:
+        - network
+  xchain2.node.com:
+    image: registry.baidubce.com/paddledtx/xchain:v3.9
+    container_name: xchain2.node.com
+    volumes:
+        - ./xchain2/conf:/home/work/xchain/conf
+        - ./xchain2/data/keys:/home/work/xchain/data/keys
+        - ./xchain2/data/config:/home/work/xchain/data/config
+    networks:
+        - network
+  xchain3.node.com:
+    image: registry.baidubce.com/paddledtx/xchain:v3.9
+    container_name: xchain3.node.com
+    volumes:
+        - ./xchain3/conf:/home/work/xchain/conf
+        - ./xchain3/data/keys:/home/work/xchain/data/keys
+        - ./xchain3/data/config:/home/work/xchain/data/config
+    networks:
+        - network
+
+networks:
+  network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.31.1.0/24
